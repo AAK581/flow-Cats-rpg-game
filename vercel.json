@@ -1,30 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/**/*.js", "use": "@vercel/node" },
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "js/**", "use": "@vercel/static" },
-    { "src": "audio/**", "use": "@vercel/static" },
-    { "src": "css/**", "use": "@vercel/static" },
-    { "src": "data/**", "use": "@vercel/static" },
-    { "src": "effects/**", "use": "@vercel/static" },
-    { "src": "fonts/**", "use": "@vercel/static" },
-    { "src": "img/**", "use": "@vercel/static" },
-    { "src": "locales/**", "use": "@vercel/static" },
-    { "src": "icon/**", "use": "@vercel/static" }
-  ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(js|audio|css|data|effects|fonts|img|locales|icon)/(.*)",
-      "dest": "/$1/$2"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/((?!api|js|audio|css|data|effects|fonts|img|locales|icon).*)",
+      "destination": "/index.html"
     }
   ]
 }
