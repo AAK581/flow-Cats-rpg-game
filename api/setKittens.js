@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     const provider = new ethers.JsonRpcProvider(config.rpc);
     const signer = wallet.connect(provider);
     const balance = await provider.getBalance(wallet.address);
-    console.log("setKittens API: Balance:", ethers.formatEther(balance), "MON");
+    console.log("setKittens API: Balance:", ethers.formatEther(balance), "FLOW");
 
     const contract = new ethers.Contract(
       config.contractAddress,
