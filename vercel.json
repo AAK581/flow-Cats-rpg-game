@@ -13,7 +13,18 @@
     { "src": "locales/**", "use": "@vercel/static" },
     { "src": "icon/**", "use": "@vercel/static" }
   ],
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(js|audio|css|data|effects|fonts|img|locales|icon)/(.*)",
+      "dest": "/$1/$2"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ]
 }
