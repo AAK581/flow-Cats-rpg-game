@@ -1,5 +1,5 @@
 {
-    "name": "rmmz-game",
+    "name": "rpg-game-flow-cats",
     "main": "index.html",
     "chromium-args": "--force-color-profile=srgb --disable-devtools",
     "window": {
@@ -8,5 +8,8 @@
         "height": 624,
         "position": "center",
         "icon": "icon/icon.png"
+    },
+    "dependencies": {
+        "ethers": "^6.13.2"
     }
 }
