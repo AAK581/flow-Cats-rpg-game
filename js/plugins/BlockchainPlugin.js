@@ -17,7 +17,7 @@
 
   // Contract address for FLOW EVM Testnet
   const contractAddresses = {
-    545: '0xA45a75B3523334bf4017b0BB9D76d4E06661fba3'
+    545: '0x3D2b376F8aAB61bF5fF14906ddC3c56C69b47A3d'
   };
 
   // Get contract address based on connected network
