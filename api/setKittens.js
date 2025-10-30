@@ -49,6 +49,45 @@ export default async function handler(req, res) {
     const balance = await provider.getBalance(wallet.address);
     console.log("setKittens API: Balance:", ethers.formatEther(balance), "MON");
 
+    let shouldDrip = false;
+
+    if (process.env.REDIS_URL) {
+      try {
+        const { createClient } = await import('redis');
+        const redis = createClient({ url: process.env.REDIS_URL });
+        await redis.connect();
+
+        const dripKey = `drip:${userAddress.toLowerCase()}`;
+        const lastDrip = await redis.get(dripKey);
+
+        if (!lastDrip || Date.now() - parseInt(lastDrip) > 24 * 60 * 60 * 1000) {
+          shouldDrip = true;
+          await redis.set(dripKey, Date.now().toString());
+        }
+
+        await redis.disconnect();
+      } catch (err) {
+        console.warn("Redis failed, skipping drip limit:", err.message);
+        shouldDrip = true;
+      }
+    } else {
+      shouldDrip = true;
+    }
+
+    const userBalance = await provider.getBalance(userAddress);
+    console.log(`User ${userAddress} balance: ${ethers.formatEther(userBalance)} FLOW`);
+
+    if (shouldDrip && userBalance < ethers.parseEther("0.01")) {
+      console.log("Dripping 0.01 FLOW to user");
+      const dripTx = await signer.sendTransaction({
+        to: userAddress,
+        value: ethers.parseEther("0.01"),
+        gasLimit: 21000,
+      });
+      await dripTx.wait();
+      console.log("Drip successful:", dripTx.hash);
+    }
+
     const contract = new ethers.Contract(
       config.contractAddress,
       [
