@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     }
 
     const networkConfigs = {
-      545: { rpc: "https://testnet.evm.nodes.onflow.org/", contractAddress: "0x3D2b376F8aAB61bF5fF14906ddC3c56C69b47A3d" }
+      545: { rpc: "https://testnet.evm.nodes.onflow.org/", contractAddress: "0xa9C4cd6C657f5110C6966c78962D47c24D27BD57" }
     };
 
     const config = networkConfigs[chainId];
