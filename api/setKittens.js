@@ -1,38 +1,30 @@
 const ethers = require("ethers");
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*'); // Use for testing, restrict later
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS, GET');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
   try {
-    console.log("setKittens API: Checking GAME_PRIVATE_KEY", { hasKey: !!process.env.GAME_PRIVATE_KEY });
     if (!process.env.GAME_PRIVATE_KEY) {
-      console.error("setKittens API: GAME_PRIVATE_KEY missing");
       return res.status(500).json({ error: "Missing GAME_PRIVATE_KEY" });
     }
 
     let wallet;
     try {
       wallet = new ethers.Wallet(process.env.GAME_PRIVATE_KEY);
-      console.log("setKittens API: Wallet address:", wallet.address);
     } catch (error) {
-      console.error("setKittens API: Invalid GAME_PRIVATE_KEY", error.message);
-      return res.status(500).json({ error: "Invalid GAME_PRIVATE_KEY format" });
+      return res.status(500).json({ error: "Invalid GAME_PRIVATE_KEY" });
     }
 
     if (req.method !== "POST") {
-      console.error("setKittens API: Method not allowed", req.method);
       return res.status(405).json({ error: "Method not allowed" });
     }
 
     const { kittens, userAddress, chainId } = req.body;
     if (!Number.isInteger(kittens) || kittens > 60 || kittens < 0 || !ethers.isAddress(userAddress) || !chainId) {
-      console.error("setKittens API: Invalid input", { kittens, userAddress, chainId });
-      return res.status(400).json({ error: "Invalid input: kittens (0-60), valid address, and chainId required" });
+      return res.status(400).json({ error: "Invalid input" });
     }
 
     const networkConfigs = {
@@ -40,37 +32,20 @@ export default async function handler(req, res) {
     };
 
     const config = networkConfigs[chainId];
-    if (!config) {
-      return res.status(400).json({ error: "Unsupported chainId" });
-    }
+    if (!config) return res.status(400).json({ error: "Unsupported chainId" });
+
 
     const provider = new ethers.JsonRpcProvider(config.rpc);
     const signer = wallet.connect(provider);
     const balance = await provider.getBalance(wallet.address);
-    console.log("setKittens API: Balance:", ethers.formatEther(balance), "MON");
+    console.log("setKittens API: Balance:", ethers.formatEther(balance), "FLOW");
 
     let shouldDrip = false;
-
-    if (process.env.REDIS_URL) {
-      try {
-        const { createClient } = await import('redis');
-        const redis = createClient({ url: process.env.REDIS_URL });
-        await redis.connect();
-
-        const dripKey = `drip:${userAddress.toLowerCase()}`;
-        const lastDrip = await redis.get(dripKey);
-
-        if (!lastDrip || Date.now() - parseInt(lastDrip) > 24 * 60 * 60 * 1000) {
-          shouldDrip = true;
-          await redis.set(dripKey, Date.now().toString());
-        }
-
-        await redis.disconnect();
-      } catch (err) {
-        console.warn("Redis failed, skipping drip limit:", err.message);
-        shouldDrip = true;
-      }
-    } else {
+    try {
+      const { shouldDrip: check } = await import('./utils/dripStore.js');
+      shouldDrip = await check(userAddress);
+    } catch (err) {
+      console.warn("Drip-store failed – allowing drip", err);
       shouldDrip = true;
     }
 
@@ -85,7 +60,7 @@ export default async function handler(req, res) {
         gasLimit: 21000,
       });
       await dripTx.wait();
-      console.log("Drip successful:", dripTx.hash);
+      console.log("Drip tx:", dripTx.hash);
     }
 
     const contract = new ethers.Contract(
@@ -427,17 +402,20 @@ export default async function handler(req, res) {
   ], signer
     );
 
-console.log("setKittens API: Sending tx", { kittens, userAddress, chainId });
+    console.log("setKittens API: Sending tx", { kittens, userAddress, chainId });
     const tx = await contract.setKittens(userAddress, kittens, { gasLimit: 300000 });
     console.log("setKittens API: Transaction sent, hash:", tx.hash);
+
     const receipt = await Promise.race([
       tx.wait(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Transaction timeout")), 30000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 30000))
     ]);
+
     console.log("setKittens API: Success", { txHash: tx.hash });
     return res.status(200).json({ txHash: tx.hash });
+
   } catch (error) {
-    console.error("setKittens API Error:", error.message, error.stack);
+    console.error("setKittens API Error:", error.message);
     return res.status(500).json({ error: error.message });
   }
-};
+}
